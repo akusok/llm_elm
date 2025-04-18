@@ -8,11 +8,13 @@ authors = [
 ]
 requires-python = ">=3.12"
 dependencies = [
+    "hpelm>=1.0.10",
     "ipykernel>=6.29.5",
     "numpy>=2.2.4",
     "pandas>=2.2.3",
     "pip>=25.0.1",
     "pydantic-ai>=0.0.55",
+    "scikit-learn>=1.6.1",
 ]
 
 [build-system]
