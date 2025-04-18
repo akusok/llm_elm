@@ -17,6 +17,7 @@ nest_asyncio.apply()
 
 ollama_model = OpenAIModel(
     model_name='llama3.1',
+    # model_name='llama3.2',
     provider=OpenAIProvider(base_url='http://localhost:11434/v1')
 )
 
@@ -49,25 +50,28 @@ class PythonFunctionModel(BaseModel):
 py_agent = Agent(ollama_model, result_type=PythonFunctionModel, retries=1)
 
 prompt = """
-    Write a Python function `train_hpelm_mnist(X_train, y_train, X_test, y_test)` that trains an HPELM model on the MNIST dataset, evaluates its performance, and returns test accuracy. 
+    Write a Python function `train_hpelm_mnist(X_train, y_train, X_test, y_test)` that converts MNIST targets to one-hot encoding, trains an HPELM model, evaluates its performance, and returns test accuracy.
     Return only function code and imports, remove examples or other python code after the function.
 
     - Input values: X_train and X_test have shape (num_samples, 784), y_train and y_test are 1D arrays of shape (num_samples,)
     - Task is a 10-class classification problem
 """
 
-# Load the content of 'hpelm_info.md' file
-with open('hpelm_doc.md', 'r') as file:
-    hpelm_info = file.read()
+# # Append the HPELM info to the prompt
+# with open('hpelm_doc.md', 'r') as file:
+#     full_prompt = prompt + "\n\n" + "Here is additional context about HPELM usage:\n" + file.read()
 
-# Append the HPELM info to the prompt
-full_prompt = prompt + "\n\n" + "Here is additional context about HPELM usage:\n" + hpelm_info
+# Append the ELM implementation to the prompt
+with open('hpelm_doc_alt.md', 'r') as file:
+    full_prompt = prompt.replace("HPELM", "ELM") + "\n\n" + "Here is additional context about HPELM usage:\n" + file.read()
+
 
 # response = py_agent.run_sync(full_prompt)
 response = simple_agent.run_sync(full_prompt)
 generated_code = response.data
 
 print(generated_code)
+print(response.usage())
 
 # %%
 
@@ -92,25 +96,25 @@ print(generated_code)
 
 
 # %% 
-# compare
-
 # Extract the function code from the response
+
 request = f"Extract and clean the code to be run by exec(code) in Python.: {generated_code}"
 
-e = None
+exc = None
 
 for _ in range(3):
-    if e is None:
+    if exc is None:
         output = generated_code
     else:
-        output = Agent(ollama_model).run_sync(request + "\n Last run error: {e}").output
+        output = simple_agent.run_sync(request + "\n Last run error: {e}").data
 
-    output_code = output.split("```python")[1].split("```")[0].strip()
+    output_code = output.split("```python")[1].split("```")[0].strip() if "```python" in output else output
     try:
         exec(output_code)
         print("Code executed successfully.\n")
         break
     except Exception as e:
+        exc = e
         print(e)
 
 print(output_code)
@@ -125,6 +129,33 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_
 
 accuracy = train_hpelm_mnist(X_train, y_train, X_test, y_test)
 print(f"Model accuracy: {accuracy}")
+
+
+# %%
+# fix code in a loop
+
+fixed_code = output_code
+
+for _ in range(3):
+
+    try:
+        exec(fixed_code)
+        accuracy = train_hpelm_mnist(X_train, y_train, X_test, y_test)
+        break
+
+    except Exception as e:
+        print(e)
+        request = f"""
+        Fix the code to be run by exec(code) in Python.: {fixed_code}
+        Return only the code, no explanation.
+
+        Error: {e}
+        """
+        output = simple_agent.run_sync(request).data
+        fixed_code = output.split("```python")[1].split("```")[0].strip() if "```python" in output else output
+
+        print("Fixed code:\n", fixed_code)
+        continue
 
 
 # %%
