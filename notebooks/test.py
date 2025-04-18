@@ -11,44 +11,49 @@ from sklearn.model_selection import train_test_split
 import nest_asyncio
 nest_asyncio.apply()
 
+
 # %%
+# setup ollama
+
+ollama_model = OpenAIModel(
+    model_name='llama3.1',
+    provider=OpenAIProvider(base_url='http://localhost:11434/v1')
+)
+
+simple_agent = Agent(ollama_model)
+
+
+# %%
+# structured output
 
 class CityLocation(BaseModel):
     city: str
     country: str
 
+structured_agent = Agent(ollama_model, result_type=CityLocation)
 
-ollama_model = OpenAIModel(
-    model_name='llama3.1',
-    # model_name='cogito:14b',
-    # model_name='mistral-small3.1',
-    provider=OpenAIProvider(base_url='http://localhost:11434/v1')
-)
-agent = Agent(ollama_model, result_type=CityLocation)
-
-result = agent.run_sync('Where were the olympics held in 2012?')
+result = structured_agent.run_sync('Where were the olympics held in 2012?')
 print(result.data)
 #> city='London' country='United Kingdom'
 print(result.usage())
-"""
-Usage(requests=1, request_tokens=57, response_tokens=8, total_tokens=65, details=None)
-"""
+
+#> Usage(requests=1, request_tokens=57, response_tokens=8, total_tokens=65, details=None)
 
 # %%
+# generate code
 
 class PythonFunctionModel(BaseModel):
-    body: str
+    code: str # code of the function train_hpelm_mnist(X_train, y_train, X_test, y_test)
 
 # ollama client
-py_agent = Agent(ollama_model)
-
+py_agent = Agent(ollama_model, result_type=PythonFunctionModel, retries=1)
 
 prompt = """
-    Write a Python function that trains an HPELM model on the MNIST dataset and evaluates its performance. Return only function code.
-    - Function signature: train_hpelm_mnist(X_train, y_train, X_test, y_test)
-    - Input values: X_train and X_test have shape (num_samples, num_features), y_train and y_test are 1D arrays of shape (num_samples,) 
+    Write a Python function `train_hpelm_mnist(X_train, y_train, X_test, y_test)` that trains an HPELM model on the MNIST dataset, evaluates its performance, and returns test accuracy. 
+    Return only function code and imports, remove examples or other python code after the function.
+
+    - Input values: X_train and X_test have shape (num_samples, 784), y_train and y_test are 1D arrays of shape (num_samples,)
     - Task is a 10-class classification problem
-    - Output: accuracy
 """
 
 # Load the content of 'hpelm_info.md' file
@@ -57,52 +62,40 @@ with open('hpelm_doc.md', 'r') as file:
 
 # Append the HPELM info to the prompt
 full_prompt = prompt + "\n\n" + "Here is additional context about HPELM usage:\n" + hpelm_info
-response = py_agent.run_sync(full_prompt)
 
-# Generate the code
-# response = py_agent.run_sync(prompt)
-
-# Assume the response is a string of Python code
-generated_code = response.output
-
-# Print the generated code
+# response = py_agent.run_sync(full_prompt)
+response = simple_agent.run_sync(full_prompt)
+generated_code = response.data
 
 print(generated_code)
 
 # %%
 
-# small ai agent that extracts function code from the response
-class FunctionCodeExtractor(BaseModel):
-    code: str
+# # small ai agent that extracts function code from the response
+# class FunctionCodeExtractor(BaseModel):
+#     code: str
 
-    @field_validator('code', mode='after')
-    @classmethod
-    def exec_code(cls, v):
-        print(v)
-        temp_ns = {}
-        try:
-            exec(v, temp_ns)
-        except Exception as e:
-            raise ValueError(f"Error executing code: {e}")
-        return v
+#     @field_validator('code', mode='after')
+#     @classmethod
+#     def exec_code(cls, v):
+#         print(v)
+#         temp_ns = {}
+#         try:
+#             exec(v, temp_ns)
+#         except Exception as e:
+#             raise ValueError(f"Error executing code: {e}")
+#         return v
 
 
-# ollama client
-smol_agent = Agent(ollama_model, result_type=FunctionCodeExtractor, retries=3)
-
-# Extract the function code from the response
-response = smol_agent.run_sync(
-    f"""
-    Extract and clean the code to be run by exec(code) in Python.:
-    {generated_code}
-    """
-)
-
-print(request)
+# # ollama client
+# smol_agent = Agent(ollama_model, result_type=FunctionCodeExtractor, retries=3)
 
 
 # %% 
 # compare
+
+# Extract the function code from the response
+request = f"Extract and clean the code to be run by exec(code) in Python.: {generated_code}"
 
 e = None
 
@@ -115,10 +108,12 @@ for _ in range(3):
     output_code = output.split("```python")[1].split("```")[0].strip()
     try:
         exec(output_code)
-        print("Code executed successfully.")
+        print("Code executed successfully.\n")
         break
     except Exception as e:
         print(e)
+
+print(output_code)
 
 # %%
 
