@@ -1,5 +1,6 @@
 # %%
 from pydantic import BaseModel, field_validator
+import numpy as np
 
 from pydantic_ai import Agent
 from pydantic_ai.models.openai import OpenAIModel
@@ -19,7 +20,7 @@ class CityLocation(BaseModel):
 
 ollama_model = OpenAIModel(
     model_name='llama3.1',
-    # model_name='qwen2.5:latest',
+    # model_name='cogito:14b',
     # model_name='mistral-small3.1',
     provider=OpenAIProvider(base_url='http://localhost:11434/v1')
 )
@@ -43,9 +44,10 @@ py_agent = Agent(ollama_model)
 
 
 prompt = """
-    Write a Python function that trains an HPELM model on the MNIST dataset and evaluates its performance. Add train/test data split inside the function. Return only function code.
-    - Function name: train_hpelm_mnist
-    - Parameters: X_train, y_train, X_test, y_test
+    Write a Python function that trains an HPELM model on the MNIST dataset and evaluates its performance. Return only function code.
+    - Function signature: train_hpelm_mnist(X_train, y_train, X_test, y_test)
+    - Input values: X_train and X_test have shape (num_samples, num_features), y_train and y_test are 1D arrays of shape (num_samples,) 
+    - Task is a 10-class classification problem
     - Output: accuracy
 """
 
@@ -61,7 +63,9 @@ response = py_agent.run_sync(full_prompt)
 # response = py_agent.run_sync(prompt)
 
 # Assume the response is a string of Python code
-generated_code = response.data
+generated_code = response.output
+
+# Print the generated code
 
 print(generated_code)
 
@@ -71,11 +75,15 @@ print(generated_code)
 class FunctionCodeExtractor(BaseModel):
     code: str
 
-    @field_validator('code', mode='before')
+    @field_validator('code', mode='after')
     @classmethod
     def exec_code(cls, v):
+        print(v)
         temp_ns = {}
-        exec(v, temp_ns)
+        try:
+            exec(v, temp_ns)
+        except Exception as e:
+            raise ValueError(f"Error executing code: {e}")
         return v
 
 
@@ -90,10 +98,27 @@ response = smol_agent.run_sync(
     """
 )
 
-# print response
-code = response.data.code
-print(code)
+print(request)
 
+
+# %% 
+# compare
+
+e = None
+
+for _ in range(3):
+    if e is None:
+        output = generated_code
+    else:
+        output = Agent(ollama_model).run_sync(request + "\n Last run error: {e}").output
+
+    output_code = output.split("```python")[1].split("```")[0].strip()
+    try:
+        exec(output_code)
+        print("Code executed successfully.")
+        break
+    except Exception as e:
+        print(e)
 
 # %%
 
@@ -103,14 +128,8 @@ y = y.astype(int)
 # train test split with stratification
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
 
-
-# Create a temporary namespace
-temp_ns = {}
-exec(code, temp_ns)
-
-accuracy = temp_ns['train_hpelm_mnist'](X_train, y_train, X_test, y_test)
+accuracy = train_hpelm_mnist(X_train, y_train, X_test, y_test)
 print(f"Model accuracy: {accuracy}")
 
 
 # %%
-
