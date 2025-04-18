@@ -1,8 +1,11 @@
-from pydantic import BaseModel
+# %%
+from pydantic import BaseModel, field_validator
 
 from pydantic_ai import Agent
 from pydantic_ai.models.openai import OpenAIModel
 from pydantic_ai.providers.openai import OpenAIProvider
+from sklearn.datasets import fetch_openml
+from sklearn.model_selection import train_test_split
 
 import nest_asyncio
 nest_asyncio.apply()
@@ -15,8 +18,8 @@ class CityLocation(BaseModel):
 
 
 ollama_model = OpenAIModel(
-    # model_name='llama3.1',
-    model_name='qwen2.5:latest',
+    model_name='llama3.1',
+    # model_name='qwen2.5:latest',
     # model_name='mistral-small3.1',
     provider=OpenAIProvider(base_url='http://localhost:11434/v1')
 )
@@ -31,57 +34,23 @@ Usage(requests=1, request_tokens=57, response_tokens=8, total_tokens=65, details
 """
 
 # %%
-# python function model
 
 class PythonFunctionModel(BaseModel):
     body: str
 
 # ollama client
-py_agent = Agent(ollama_model, result_type=PythonFunctionModel, retries=3)
-
-# Define a prompt for generating a Python function
-prompt = """
-Write and return the code for a Python function that calculates the sum of two numbers.
-- Function name: calculate_sum
-- Parameters: a, b
-- Body: return the sum of a and b
-"""
-
-# Generate the code
-# Use the Agent class to handle the prompt and response
-response = py_agent.run_sync(prompt)
-
-# # Assume the response is a string of Python code
-generated_code = response.data.body
-
-# %%
-
-# Create a temporary namespace
-temp_ns = {}
-exec(generated_code, temp_ns)
-
-# Call the function from the temporary namespace
-result = temp_ns['calculate_sum'](1, 2)
-print(result)  # Output: 3
-
-# %%
-
-class PythonFunctionModel(BaseModel):
-    body: str
-
-# ollama client
-py_agent = Agent(ollama_model, result_type=PythonFunctionModel, retries=3)
+py_agent = Agent(ollama_model)
 
 
 prompt = """
-    Write a Python function that trains an HPELM model on the MNIST dataset and evaluates its performance. Use train/test data split inside the function. Return only the code of the function body.
+    Write a Python function that trains an HPELM model on the MNIST dataset and evaluates its performance. Add train/test data split inside the function. Return only function code.
     - Function name: train_hpelm_mnist
-    - Parameters: X, y from fetch_openml('mnist_784', version=1, return_X_y=True, as_frame=False)
+    - Parameters: X_train, y_train, X_test, y_test
     - Output: accuracy
 """
 
 # Load the content of 'hpelm_info.md' file
-with open('hpelm_info.md', 'r') as file:
+with open('hpelm_doc.md', 'r') as file:
     hpelm_info = file.read()
 
 # Append the HPELM info to the prompt
@@ -92,23 +61,54 @@ response = py_agent.run_sync(full_prompt)
 # response = py_agent.run_sync(prompt)
 
 # Assume the response is a string of Python code
-generated_code = response.data.body
-
-# Print the generated code
-print(generated_code)
+generated_code = response.data
 
 # %%
 
-from sklearn.datasets import fetch_openml
+# small ai agent that extracts function code from the response
+class FunctionCodeExtractor(BaseModel):
+    code: str
 
-# Create a temporary namespace
-temp_ns = {}
-exec(generated_code, temp_ns)
+    @field_validator('code', mode='before')
+    @classmethod
+    def exec_code(cls, v):
+        temp_ns = {}
+        exec(v, temp_ns)
+        return v
+
+
+# ollama client
+smol_agent = Agent(ollama_model, result_type=FunctionCodeExtractor, retries=3)
+
+# Extract the function code from the response
+response = smol_agent.run_sync(
+    f"""
+    Extract the function code from the following response. Remove triple quotes and any other text. Make sure the code can run by `exec(code)` in Python.:
+    {generated_code}
+    """
+)
+
+# print response
+code = response.data.code
+print(code)
+
+
+# %%
 
 # Example usage of the generated function
 X, y = fetch_openml('mnist_784', version=1, return_X_y=True, as_frame=False)
-accuracy = temp_ns['train_hpelm_mnist'](X, y)
+y = y.astype(int)
+# train test split with stratification
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
+
+
+# Create a temporary namespace
+temp_ns = {}
+exec(code, temp_ns)
+
+accuracy = temp_ns['train_hpelm_mnist'](X_train, y_train, X_test, y_test)
 print(f"Model accuracy: {accuracy}")
 
 
 # %%
+

@@ -1,26 +1,44 @@
-import numpy as np
 from sklearn.datasets import fetch_openml
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import OneHotEncoder
 from hpelm import ELM
+import numpy as np
 
-# Load MNIST dataset
+def train_hpelm_mnist(X_train, y_train, X_test, y_test):
+    # Ensure targets are one-hot encoded for classification task
+    num_classes = 10
+    
+    # Create and configure the HPELM model for classification with sigmoid neurons
+    elm = ELM(X_train.shape[1], num_classes, classification="c")
+    
+    # Add 50 sigmoid neurons to the model
+    elm.add_neurons(50, "sigm")
+    
+    # Train the model using training data
+    elm.train(X=X_train, T=y_train)
+    
+    # Make predictions on test data
+    y_pred = elm.predict(X_test)
+    
+    # Calculate accuracy by comparing predicted labels with true labels
+    accuracy = np.mean(np.argmax(y_pred, axis=1) == y_test)
+    
+    return accuracy
+
+
+# Example usage of the generated function
 X, y = fetch_openml('mnist_784', version=1, return_X_y=True, as_frame=False)
-X = X / 255.0  # Normalize pixel values
 
-# One-hot encode labels
-enc = OneHotEncoder(sparse_output=False)
-y_onehot = enc.fit_transform(y.reshape(-1, 1))
+y = np.eye(10)[y.astype(int)]
+# train test split with stratification
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-# Split into train and test sets
-X_train, X_test, y_train, y_test = train_test_split(X, y_onehot, test_size=0.2, random_state=42)
+# print size of X and y arrays
+print(f"X_train shape: {X_train.shape}")
+print(f"X_test shape: {X_test.shape}")
+print(f"y_train shape: {y_train.shape}")
+print(f"y_test shape: {y_test.shape}")
 
-# Train ELM classifier
-elm = ELM(X_train.shape[1], y_train.shape[1], classification="c")
-elm.add_neurons(1000, "sigm")  # 1000 sigmoid neurons
-elm.train(X_train, y_train, "c")
+accuracy = train_hpelm_mnist(X_train, y_train, X_test, y_test)
 
-# Predict and evaluate
-y_pred = elm.predict(X_test)
-accuracy = (y_pred.argmax(axis=1) == y_test.argmax(axis=1)).mean()
-print(f"Test accuracy: {accuracy:.4f}")
+print(f"Model accuracy: {accuracy}")
