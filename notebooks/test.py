@@ -63,6 +63,8 @@ response = py_agent.run_sync(full_prompt)
 # Assume the response is a string of Python code
 generated_code = response.data
 
+print(generated_code)
+
 # %%
 
 # small ai agent that extracts function code from the response
@@ -83,7 +85,7 @@ smol_agent = Agent(ollama_model, result_type=FunctionCodeExtractor, retries=3)
 # Extract the function code from the response
 response = smol_agent.run_sync(
     f"""
-    Extract the function code from the following response. Remove triple quotes and any other text. Make sure the code can run by `exec(code)` in Python.:
+    Extract and clean the code to be run by exec(code) in Python.:
     {generated_code}
     """
 )
