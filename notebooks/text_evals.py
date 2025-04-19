@@ -146,6 +146,7 @@ Error: {msg}
 # run experiment multiple times and gather statistics
 
 experimental_results = []
+fname_out = f"./experiments/mnist_experiments_{model_name}_{uuid.uuid4()}.pkl"
 
 for i in range(10):
     print()
@@ -170,10 +171,8 @@ for i in range(10):
         "fixed_code": fixed_code if score == 1 else "",
     })
  
-# save results as pandas dataframe to a TCV file
-pd.DataFrame(experimental_results).to_pickle(
-    f"./experiments/mnist_experiments_{uuid.uuid4()}.pkl"
-)
+    # save results as pandas dataframe to a TCV file
+    pd.DataFrame(experimental_results).to_pickle(fname_out)
 
 
 # %%
