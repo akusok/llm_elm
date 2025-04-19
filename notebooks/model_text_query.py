@@ -17,10 +17,10 @@ nest_asyncio.apply()
 
 ollama_model = OpenAIModel(
     # model_name='qwen2.5-coder:14b',
-    model_name='qwen2.5-coder:7b',
+    # model_name='qwen2.5-coder:7b',
     # model_name='qwen2.5-coder:3b',
 
-    # model_name='granite3.3',
+    model_name='granite3.3',
 
     # model_name='cogito:14b',
     # model_name='llama3.1',
