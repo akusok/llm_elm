@@ -16,7 +16,14 @@ nest_asyncio.apply()
 # setup ollama
 
 ollama_model = OpenAIModel(
-    model_name='llama3.1',
+    # model_name='qwen2.5-coder:14b',
+    model_name='qwen2.5-coder:7b',
+    # model_name='qwen2.5-coder:3b',
+
+    # model_name='granite3.3',
+
+    # model_name='cogito:14b',
+    # model_name='llama3.1',
     # model_name='llama3.2',
     provider=OpenAIProvider(base_url='http://localhost:11434/v1')
 )
@@ -50,7 +57,9 @@ class PythonFunctionModel(BaseModel):
 py_agent = Agent(ollama_model, result_type=PythonFunctionModel, retries=1)
 
 prompt = """
-    Write a Python function `train_hpelm_mnist(X_train, y_train, X_test, y_test)` that converts MNIST targets to one-hot encoding, trains an HPELM model, evaluates its performance, and returns test accuracy.
+    Write a Python function `train_hpelm_mnist(X_train, y_train, X_test, y_test)` that converts MNIST targets 
+    to one-hot encoding, trains an HPELM model, evaluates its performance, and returns test accuracy.
+    Use L2 regularization to avoid overfitting.
     Return only function code and imports, remove examples or other python code after the function.
 
     - Input values: X_train and X_test have shape (num_samples, 784), y_train and y_test are 1D arrays of shape (num_samples,)
@@ -134,28 +143,30 @@ print(f"Model accuracy: {accuracy}")
 # %%
 # fix code in a loop
 
-fixed_code = output_code
+if False:
+    fixed_code = output_code
 
-for _ in range(3):
+    for _ in range(3):
+        try:
+            exec(fixed_code)
+            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
+            accuracy = train_hpelm_mnist(X_train, y_train, X_test, y_test)
+            print(f"Model accuracy: {accuracy}")
+            break
 
-    try:
-        exec(fixed_code)
-        accuracy = train_hpelm_mnist(X_train, y_train, X_test, y_test)
-        break
+        except Exception as e:
+            print(e)
+            request = f"""
+            Fix the code to be run by exec(code) in Python.: {fixed_code}
+            Return only the code, no explanation.
 
-    except Exception as e:
-        print(e)
-        request = f"""
-        Fix the code to be run by exec(code) in Python.: {fixed_code}
-        Return only the code, no explanation.
+            Error: {e}
+            """
+            output = simple_agent.run_sync(request).data
+            fixed_code = output.split("```python")[1].split("```")[0].strip() if "```python" in output else output
 
-        Error: {e}
-        """
-        output = simple_agent.run_sync(request).data
-        fixed_code = output.split("```python")[1].split("```")[0].strip() if "```python" in output else output
-
-        print("Fixed code:\n", fixed_code)
-        continue
+            print("Fixed code:\n", fixed_code)
+            continue
 
 
 # %%
