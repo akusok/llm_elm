@@ -71,7 +71,7 @@ prompt = """
 #     full_prompt = prompt + "\n\n" + "Here is additional context about HPELM usage:\n" + file.read()
 
 # Append the ELM implementation to the prompt
-with open('hpelm_doc_alt.md', 'r') as file:
+with open('../doc/hpelm_doc_alt.md', 'r') as file:
     full_prompt = prompt.replace("HPELM", "ELM") + "\n\n" + "Here is additional context about HPELM usage:\n" + file.read()
 
 
@@ -81,28 +81,6 @@ generated_code = response.data
 
 print(generated_code)
 print(response.usage())
-
-# %%
-
-# # small ai agent that extracts function code from the response
-# class FunctionCodeExtractor(BaseModel):
-#     code: str
-
-#     @field_validator('code', mode='after')
-#     @classmethod
-#     def exec_code(cls, v):
-#         print(v)
-#         temp_ns = {}
-#         try:
-#             exec(v, temp_ns)
-#         except Exception as e:
-#             raise ValueError(f"Error executing code: {e}")
-#         return v
-
-
-# # ollama client
-# smol_agent = Agent(ollama_model, result_type=FunctionCodeExtractor, retries=3)
-
 
 # %% 
 # Extract the function code from the response
