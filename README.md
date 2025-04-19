@@ -2,6 +2,12 @@
 
 An LLM expert system for writing ML solution based on Extreme Learning Machines
 
+Adding packages:
+
+```python
+uv add --index https://pypi.org/simple foo
+```
+
 ## text-query
 
 `text-query`: Using text-only queries, no Pydantic structured output. Small models struggle a lot with the structured output, while producing good results with bare-text output.
