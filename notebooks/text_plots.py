@@ -30,10 +30,26 @@ import matplotlib.pyplot as plt
 
 # Specify the desired order of models
 model_order = [
+    "exaone-deep",
     "deepseek-r1:8b",
-    "marco-o1",
-    "exaone3.5",
+    "gemma3:12b-it-qat",
     "command-r7b",
+    "opencoder",
+    "cogito:8b",
+    "llama3.1",
+    "tulu3",
+    "falcon3",
+    "granite3.3",
+    "qwen2.5-coder:7b",
+    "exaone3.5",
+    "marco-o1",
+
+    "llama3.2",
+    "llama3.1",
+
+    "granite3.3:2b",
+    "granite3.3",
+
 
     "qwen2.5-coder:1.5b",
     "qwen2.5-coder:3b",
@@ -45,12 +61,6 @@ model_order = [
     "cogito:8b",
     "cogito:14b",
     "cogito:32b",
-
-    "granite3.3:2b",
-    "granite3.3",
-
-    "llama3.2",
-    "llama3.1",
 
     "phi4",
     # Add/remove model names as needed
@@ -78,10 +88,10 @@ score_counts = score_counts[[0, 1, 4, 5]]
 score_counts = score_counts.reindex(model_order).dropna(how="all")
 
 # Plot stacked bar chart
-ax = score_counts.plot(kind='bar', stacked=True, color=['red', 'orange', 'yellow', 'green'])
+ax = score_counts.plot(kind='bar', stacked=True, color=['red', 'orange', 'yellow', 'green'], legend=False, figsize=(8, 5))
 plt.ylabel('Percentage')
 plt.title('Outcome Distribution by Model')
-plt.legend(title='Score', labels=['Not Eval', 'Eval', 'Success on Fix', 'Success'])
+# plt.legend(title='Score', labels=['Not Eval', 'Eval', 'Success on Fix', 'Success'])
 plt.ylim(0, 1)
 plt.tight_layout()
 plt.show()

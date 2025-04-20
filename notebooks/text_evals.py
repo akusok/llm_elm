@@ -146,7 +146,7 @@ Error: {msg}
 # run experiment multiple times and gather statistics
 
 experimental_results = []
-fname_out = f"./experiments/mnist_experiments_{model_name}_{uuid.uuid4()}.pkl"
+fname_out = f"./experiments/mnist_experiments_{model_name.replace("/", "_")}_{uuid.uuid4()}.pkl"
 
 n_attempts = 10 if len(sys.argv) < 2 else int(sys.argv[2])
 
