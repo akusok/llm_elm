@@ -1,0 +1,140 @@
+ELM
+
+class hpelm.elm.ELM(inputs, outputs, classification='', w=None, batch=1000, accelerator=None, precision='double', norm=None, tprint=5)[source]
+Bases: object
+
+Interface for training Extreme Learning Machines (ELM).
+
+Parameters:	
+inputs (int) – dimensionality of input data, or number of data features
+outputs (int) – dimensionality of output data, or number of classes
+classification ('c'/'wc'/'ml', optional) – train ELM for classfication (‘c’) / weighted classification (‘wc’) / multi-label classification (‘ml’). For weighted classification you can provide weights in w. ELM will compute and use the corresponding classification error instead of Mean Squared Error.
+w (vector, optional) – weights vector for weighted classification, lenght (outputs * 1).
+batch (int, optional) – batch size for data processing in ELM, reduces memory requirements. Does not work for model structure selection (validation, cross-validation, Leave-One-Out). Can be changed later directly as a class attribute.
+accelerator ("GPU"/"basic", optional) – type of accelerated ELM to use: None, ‘GPU’, ‘basic’, ...
+precision (optional) – data precision to use, supports signle (‘single’, ‘32’ or numpy.float32) or double (‘double’, ‘64’ or numpy.float64). Single precision is faster but may cause numerical errors. Majority of GPUs work in single precision. Default: double.
+norm (double, optinal) – L2-normalization parameter, None gives the default value.
+tprint (int, optional) – ELM reports its progess every tprint seconds or after every batch, whatever takes longer.
+Class attributes; attributes that simply store initialization or train() parameters are omitted.
+
+nnet
+object
+
+Implementation of neural network with computational methods, but without complex logic. Different implementations are given by different classes: for Python, for GPU, etc. See hpelm.nnets folder for particular files. You can implement your own computational algorithm by inheriting from hpelm.nnets.SLFN and overwriting some methods.
+
+flist
+list of strings
+
+Awailable types of neurons, use them when adding new neurons.
+
+Note
+
+Below the ‘matrix’ type means a 2-dimensional Numpy.ndarray.
+
+add_data(X, T)[source]
+Feed new training data (X,T) to ELM model in batches; does not solve ELM itself.
+
+Helper method that updates intermediate solution parameters HH and HT, which are used for solving ELM later. Updates accumulate, so this method can be called multiple times with different parts of training data. To reset accumulated training data, use ELM.nnet.reset().
+
+For training an ELM use ELM.train() instead.
+
+Parameters:	
+X (matrix) – input training data
+T (matrix) – output training data
+add_neurons(number, func, W=None, B=None)[source]
+Adds neurons to ELM model. ELM is created empty, and needs some neurons to work.
+
+Add neurons to an empty ELM model, or add more neurons to a model that already has some.
+
+Random weights W and biases B are generated automatically if not provided explicitly. Maximum number of neurons is limited by the available RAM and computational power, a sensible limit would be 1000 neurons for an average size dataset and 15000 for the largest datasets. ELM becomes slower after 3000 neurons because computational complexity is proportional to a qube of number of neurons.
+
+This method checks and prepares neurons, they are actually stored in solver object.
+
+Parameters:	
+number (int) – number of neurons to add
+func (string) – type of neurons: “lin” for linear, “sigm” or “tanh” for non-linear, “rbf_l1”, “rbf_l2” or “rbf_linf” for radial basis function neurons.
+W (matrix, optional) – random projection matrix size (inputs * number). For ‘rbf_‘ neurons, W stores centroids of radial basis functions in transposed form.
+B (vector, optional) – bias vector of size (number * 1), a 1-dimensional Numpy.ndarray object. For ‘rbf_‘ neurons, B gives widths of radial basis functions.
+confusion(T, Y)[source]
+Computes confusion matrix for classification.
+
+Confusion matrix C such that element Ci,j equals to the number of observations known to be class i but predicted to be class j.
+
+Parameters:	
+T (matrix) – true outputs or classes, size (N * outputs)
+Y (matrix) – predicted outputs by ELM model, size (N * outputs)
+Returns:	
+conf – confusion matrix, size (outputs * outputs)
+
+Return type:	
+matrix
+
+error(T, Y)[source]
+Calculate error of model predictions.
+
+Computes Mean Squared Error (MSE) between model predictions Y and true outputs T. For classification, computes mis-classification error. For multi-label classification, correct classes are all with Y>0.5.
+
+For weighted classification the error is an average weighted True Positive Rate, or percentage of correctly predicted samples for each class, multiplied by weight of that class and averaged. If you want something else, just write it yourself :) See https://en.wikipedia.org/wiki/Confusion_matrix for details.
+
+Another option is to use scikit-learn’s performance metrics. Transform Y and T into scikit’s format by y_true = T.argmax[1], y_pred = Y.argmax[1]. http://scikit-learn.org/stable/modules/classes.html#module-sklearn.metrics
+
+Parameters:	
+T (matrix) – true outputs.
+Y (matrix) – ELM model predictions, can be computed with predict() function.
+Returns:	
+e – MSE for regression / classification error for classification.
+
+Return type:	
+double
+
+load(fname)[source]
+Load ELM model data from a file.
+
+Load requires an ELM object, and it uses solver type, precision and batch size from that ELM object.
+
+Parameters:	fname (string) – filename to load model from.
+predict(X)[source]
+Predict outputs Y for the given input data X.
+
+Parameters:	X (matrix) – input data of size (N * inputs)
+Returns:	Y – output data or predicted classes, size (N * outputs).
+Return type:	matrix
+project(X)[source]
+Get ELM’s hidden layer representation of input data.
+
+Parameters:	X (matrix) – input data, size (N * inputs)
+Returns:	H – hidden layer representation matrix, size (N * number_of_neurons)
+Return type:	matrix
+save(fname)[source]
+Save ELM model with current parameters.
+
+Model does not save a particular solver, precision batch size. They are obtained from a new ELM when loading the model (so one can switch to another solver, for instance).
+
+Also ranking and max number of neurons are not saved, because they are runtime training info irrelevant after the training completes.
+
+Parameters:	fname (string) – filename to save model into.
+train(X, T, *args, **kwargs)[source]
+Universal training interface for ELM model with model structure selection.
+
+Model structure selection takes more time and requires all data to fit into memory. Optimal pruning (‘OP’, effectively an L1-regularization) takes the most time but gives the smallest and best performing model. Choosing a classification forces ELM to use classification error in model structure selection, and in error() method output.
+
+Parameters:	
+X (matrix) – input data matrix, size (N * inputs)
+T (matrix) – outputs data matrix, size (N * outputs)
+'V'/'CV'/'LOO' (sting, choose one) – model structure selection: select optimal number of neurons using a validation set (‘V’), cross-validation (‘CV’) or Leave-One-Out (‘LOO’)
+'OP' (string, use with 'V'/'CV'/'LOO') – choose best neurons instead of random ones, training takes longer; equivalent to L1-regularization
+'c'/'wc'/'ml'/'r' (string, choose one) – train ELM for classification (‘c’), classification with weighted classes (‘wc’), multi-label classification (‘ml’) with several correct classes per data sample, or regression (‘r’) without any classification. In classification, number of outputs is the number of classes; correct class(es) for each sample has value 1 and incorrect classes have 0. Overwrites parameters given an ELM initialization time.
+Keyword Arguments:
+ 	
+Xv (matrix, use with ‘V’) – validation set input data, size (Nv * inputs)
+Tv (matrix, use with ‘V’) – validation set outputs data, size (Nv * outputs)
+k (int, use with ‘CV’) – number of splits for cross-validation, k>=3
+kmax (int, optional, use with ‘OP’) – maximum number of neurons to keep in ELM
+batch (int, optional) – batch size for ELM, overwrites batch size from the initialization
+Returns:	
+e – test error for cross-validation, computed from one separate test chunk in each
+
+split of data during the cross-validation procedure
+
+Return type:	
+double, for ‘CV’
