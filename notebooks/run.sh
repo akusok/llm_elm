@@ -88,3 +88,4 @@ for i in {1..2}; do
   uv run python text_evals.py qwen2.5-coder:32b 30 &
 done
 wait
+

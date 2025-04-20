@@ -37,12 +37,13 @@ model_order = [
     "opencoder",
     "cogito:8b",
     "llama3.1",
+    "yandex/YandexGPT-5-Lite-8B-instruct-GGUF",
     "tulu3",
     "falcon3",
     "granite3.3",
+    "marco-o1",
     "qwen2.5-coder:7b",
     "exaone3.5",
-    "marco-o1",
 
     "llama3.2",
     "llama3.1",
@@ -50,6 +51,8 @@ model_order = [
     "granite3.3:2b",
     "granite3.3",
 
+    "kwangsuklee/Phi4-mini-inst-Q4_K_M",
+    "phi4",
 
     "qwen2.5-coder:1.5b",
     "qwen2.5-coder:3b",
@@ -61,8 +64,6 @@ model_order = [
     "cogito:8b",
     "cogito:14b",
     "cogito:32b",
-
-    "phi4",
     # Add/remove model names as needed
 ]
 
@@ -87,8 +88,16 @@ score_counts = score_counts[[0, 1, 4, 5]]
 # Reindex to enforce the desired model order (drop missing if not present)
 score_counts = score_counts.reindex(model_order).dropna(how="all")
 
+# rename columns for clarity
+score_counts.rename(columns={0: 'Not Eval', 1: 'Eval', 4: 'Success on Fix', 5: 'Success'}, inplace=True)
+# rename some index names for clarity
+score_counts.rename(index={
+    'yandex/YandexGPT-5-Lite-8B-instruct-GGUF': 'yandex:8b',
+    'kwangsuklee/Phi4-mini-inst-Q4_K_M': 'phi4-mini:4b',
+}, inplace=True)
+
 # Plot stacked bar chart
-ax = score_counts.plot(kind='bar', stacked=True, color=['red', 'orange', 'yellow', 'green'], legend=False, figsize=(8, 5))
+ax = score_counts.plot(kind='bar', stacked=True, color=['red', 'orange', 'yellow', 'green'], legend=True, figsize=(8, 5))
 plt.ylabel('Percentage')
 plt.title('Outcome Distribution by Model')
 # plt.legend(title='Score', labels=['Not Eval', 'Eval', 'Success on Fix', 'Success'])
