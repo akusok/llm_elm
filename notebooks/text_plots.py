@@ -30,6 +30,11 @@ import matplotlib.pyplot as plt
 
 # Specify the desired order of models
 model_order = [
+    "deepseek-r1:8b",
+    "marco-o1",
+    "exaone3.5",
+    "command-r7b",
+
     "qwen2.5-coder:1.5b",
     "qwen2.5-coder:3b",
     "qwen2.5-coder:7b",
