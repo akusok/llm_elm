@@ -810,6 +810,7 @@ dependencies = [
     { name = "pandas" },
     { name = "pip" },
     { name = "pydantic-ai" },
+    { name = "pydantic-evals" },
     { name = "scikit-learn" },
 ]
 
@@ -822,6 +823,7 @@ requires-dist = [
     { name = "pandas", specifier = ">=2.2.3" },
     { name = "pip", specifier = ">=25.0.1" },
     { name = "pydantic-ai", specifier = ">=0.0.55" },
+    { name = "pydantic-evals", specifier = ">=0.0.55" },
     { name = "scikit-learn", specifier = ">=1.6.1" },
 ]
 
