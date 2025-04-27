@@ -32,7 +32,6 @@ formatted_agent = Agent(
     output_type=PythonFunctionModel
 )
 
-# %%
 
 df_parts = []
 
@@ -51,19 +50,19 @@ df['format'].value_counts()
 
 # %%
 
-# df_parts = []
+df_parts = []
 
-# for root,_, files in os.walk("."):
-#     for file in files:
-#         if file.endswith(".pkl"):
-#             df = pd.read_pickle(os.path.join(root, file))
-#             df_parts.append(df)
+for root,_, files in os.walk("."):
+    for file in files:
+        if file.endswith(".pkl"):
+            df = pd.read_pickle(os.path.join(root, file))
+            df_parts.append(df)
 
-# df = pd.concat(df_parts, ignore_index=True)
-# df = df[df['format'] == "pydantic"][['generated_code']]
+df = pd.concat(df_parts, ignore_index=True)
+df = df[df['format'] == "pydantic"][['generated_code']]
 
-# from IPython.display import display
-# display(df.head(20).style.set_caption("Sample of DataFrame").background_gradient(cmap="YlGnBu"))
+from IPython.display import display
+display(df.head(20).style.set_caption("Sample of DataFrame").background_gradient(cmap="YlGnBu"))
 
 # %%
 

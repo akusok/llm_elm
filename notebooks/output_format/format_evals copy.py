@@ -65,7 +65,9 @@ def eval_code(code:str) -> tuple[int,str]:
 # %%
 # setup ollama
 
-model_name='qwen2.5-coder:7b'
+# model_name='qwen2.5-coder:7b'
+model_name='granite3.3'
+
 
 
 ollama_model = OpenAIModel(

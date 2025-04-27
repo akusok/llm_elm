@@ -65,7 +65,8 @@ def eval_code(code:str) -> tuple[int,str]:
 # %%
 # setup ollama
 
-model_name='qwen2.5-coder:7b'
+# model_name='qwen2.5-coder:7b'
+model_name='granite3.3'
 
 
 ollama_model = OpenAIModel(
@@ -156,6 +157,7 @@ for i in range(n_attempts):
         generated_code = formatted_agent.run_sync(full_prompt).output.python_code
     except UnexpectedModelBehavior as e:
         generated_code = str(e)
+    score, msg = eval_code(generated_code)
 
     experimental_results.append({
         "model_name": model_name,
@@ -163,10 +165,10 @@ for i in range(n_attempts):
         "experiment": i,
         "score": score,
         "msg": msg,
-        "fix_score": fix_score if score == 1 else 0,
-        "fix_msg": fix_msg if score == 1 else "",
+        "fix_score": 0,
+        "fix_msg": "",
         "generated_code": generated_code,
-        "fixed_code": fixed_code if score == 1 else "",
+        "fixed_code": "",
     })
 
     # save results as pandas dataframe to a TCV file
