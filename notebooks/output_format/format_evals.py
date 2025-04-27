@@ -1,5 +1,6 @@
 # %%
 
+
 from pydantic_ai import Agent
 from pydantic_ai.models.openai import OpenAIModel
 from pydantic_ai.providers.openai import OpenAIProvider
@@ -10,7 +11,6 @@ nest_asyncio.apply()
 # %%
 # load mnist dataset
 
-import os
 import uuid
 import pandas as pd
 from sklearn.datasets import fetch_openml
@@ -65,7 +65,8 @@ def eval_code(code:str) -> tuple[int,str]:
 # %%
 # setup ollama
 
-model_name='qwen2.5-coder:7b'
+# model_name='qwen2.5-coder:7b'
+model_name='granite3.3'
 
 
 ollama_model = OpenAIModel(
@@ -75,11 +76,29 @@ ollama_model = OpenAIModel(
 
 simple_agent = Agent(ollama_model)
 
+from pydantic import BaseModel
+from pydantic_ai.exceptions import UnexpectedModelBehavior
+
+class PythonFunctionModel(BaseModel):
+    python_code: str  # Python code of the function
+
+# Create a new agent with the formatted output model
+formatted_agent = Agent(
+    ollama_model,
+    output_type=PythonFunctionModel,
+    retries=3,
+)
 
 # %%
-# generate code
 
-prompt1 = """
+
+# %%
+
+
+# ollama client
+py_agent = Agent(ollama_model)
+
+prompt = """
     Write a Python function `train_hpelm_mnist(X_train, y_train, X_test, y_test)` that converts MNIST targets 
     to one-hot encoding, trains an ELM model, evaluates its performance, and returns test accuracy.
     Use L2 regularization to avoid overfitting.
@@ -89,37 +108,9 @@ prompt1 = """
     - Task is a 10-class classification problem
 """
 
-prompt2 = """
-    Write a Python function `train_hpelm_mnist(X_train, y_train, X_test, y_test)` that 
-    trains an ELM model on MNIST dataset, evaluates its performance, and returns test accuracy.
-    Use L2 regularization to avoid overfitting.
-    Return only function code and imports, remove examples or other python code after the function.
-"""
-
-prompt3 = """
-    Train an ELM model on the MNIST dataset using the `hpelm` library, and return the test accuracy. 
-    Function should be `train_hpelm_mnist(X_train, y_train, X_test, y_test)`.
-    Use L2 regularization to avoid overfitting.
-"""
-
-prompt4 = """
-    Write a Python function `train_hpelm_mnist(X_train, y_train, X_test, y_test)` 
-    that trains on MNIST dataset and returns accuracy.
-"""
-
-
-
-# Append the ELM implementation to the prompt
+# Load the content of 'hpelm_info.md' file
 with open('../../doc/hpelm_doc_alt.md', 'r') as file:
-    full_prompt1 = prompt1 + "\n\n" + "Here is additional context about HPELM usage:\n" + file.read()
-with open('../../doc/hpelm_doc_alt.md', 'r') as file:
-    full_prompt2 = prompt2 + "\n\n" + "Here is additional context about HPELM usage:\n" + file.read()
-with open('../../doc/hpelm_doc_alt.md', 'r') as file:
-    full_prompt3 = prompt3 + "\n\n" + "Here is additional context about HPELM usage:\n" + file.read()
-with open('../../doc/hpelm_doc_alt.md', 'r') as file:
-    full_prompt4 = prompt4 + "\n\n" + "Here is additional context about HPELM usage:\n" + file.read()
-
-full_prompts = [full_prompt1, full_prompt2, full_prompt3, full_prompt4]
+    full_prompt = prompt + "\n\n" + "Here is additional context about HPELM usage:\n" + file.read()
 
 fix_request = """
 Fix the code to be run by exec(code) in Python.: {generated_code}
@@ -140,27 +131,48 @@ for i in range(n_attempts):
     print()
     print(f"Experiment {i+1}")
 
-    for j in range(4):
-        generated_code = simple_agent.run_sync(full_prompts[j]).data
-        score, msg = eval_code(generated_code)
+    # baseline
+    generated_code = simple_agent.run_sync(full_prompt).data
+    score, msg = eval_code(generated_code)
 
-        if score == 1:
-            print("Code has errors, trying to fix it...")
-            rq = fix_request.format(generated_code=generated_code, msg=msg)
-            fixed_code = simple_agent.run_sync(rq).data
-            fix_score, fix_msg = eval_code(fixed_code)
+    if score == 1:
+        print("Code has errors, trying to fix it...")
+        rq = fix_request.format(generated_code=generated_code, msg=msg)
+        fixed_code = simple_agent.run_sync(rq).data
+        fix_score, fix_msg = eval_code(fixed_code)
 
-        experimental_results.append({
-            "model_name": model_name,
-            "prompt": j,
-            "experiment": i,
-            "score": score,
-            "msg": msg,
-            "fix_score": fix_score if score == 1 else 0,
-            "fix_msg": fix_msg if score == 1 else "",
-            "generated_code": generated_code,
-            "fixed_code": fixed_code if score == 1 else "",
-        })
-    
-        # save results as pandas dataframe to a TCV file
-        pd.DataFrame(experimental_results).to_pickle(fname_out)
+    experimental_results.append({
+        "model_name": model_name,
+        "format": "plain text",
+        "experiment": i,
+        "score": score,
+        "msg": msg,
+        "fix_score": fix_score if score == 1 else 0,
+        "fix_msg": fix_msg if score == 1 else "",
+        "generated_code": generated_code,
+        "fixed_code": fixed_code if score == 1 else "",
+    })
+
+    try:
+        generated_code = formatted_agent.run_sync(full_prompt).output.python_code
+    except UnexpectedModelBehavior as e:
+        generated_code = str(e)
+    score, msg = eval_code(generated_code)
+
+    experimental_results.append({
+        "model_name": model_name,
+        "format": "pydantic",
+        "experiment": i,
+        "score": score,
+        "msg": msg,
+        "fix_score": 0,
+        "fix_msg": "",
+        "generated_code": generated_code,
+        "fixed_code": "",
+    })
+
+    # save results as pandas dataframe to a TCV file
+    pd.DataFrame(experimental_results).to_pickle(fname_out)
+
+# %%
+

@@ -79,7 +79,7 @@ simple_agent = Agent(ollama_model)
 # %%
 # generate code
 
-prompt1 = """
+prompt = """
     Write a Python function `train_hpelm_mnist(X_train, y_train, X_test, y_test)` that converts MNIST targets 
     to one-hot encoding, trains an ELM model, evaluates its performance, and returns test accuracy.
     Use L2 regularization to avoid overfitting.
@@ -89,37 +89,22 @@ prompt1 = """
     - Task is a 10-class classification problem
 """
 
-prompt2 = """
-    Write a Python function `train_hpelm_mnist(X_train, y_train, X_test, y_test)` that 
-    trains an ELM model on MNIST dataset, evaluates its performance, and returns test accuracy.
-    Use L2 regularization to avoid overfitting.
-    Return only function code and imports, remove examples or other python code after the function.
-"""
-
-prompt3 = """
-    Train an ELM model on the MNIST dataset using the `hpelm` library, and return the test accuracy. 
-    Function should be `train_hpelm_mnist(X_train, y_train, X_test, y_test)`.
-    Use L2 regularization to avoid overfitting.
-"""
-
-prompt4 = """
-    Write a Python function `train_hpelm_mnist(X_train, y_train, X_test, y_test)` 
-    that trains on MNIST dataset and returns accuracy.
-"""
-
-
 
 # Append the ELM implementation to the prompt
 with open('../../doc/hpelm_doc_alt.md', 'r') as file:
-    full_prompt1 = prompt1 + "\n\n" + "Here is additional context about HPELM usage:\n" + file.read()
-with open('../../doc/hpelm_doc_alt.md', 'r') as file:
-    full_prompt2 = prompt2 + "\n\n" + "Here is additional context about HPELM usage:\n" + file.read()
-with open('../../doc/hpelm_doc_alt.md', 'r') as file:
-    full_prompt3 = prompt3 + "\n\n" + "Here is additional context about HPELM usage:\n" + file.read()
-with open('../../doc/hpelm_doc_alt.md', 'r') as file:
-    full_prompt4 = prompt4 + "\n\n" + "Here is additional context about HPELM usage:\n" + file.read()
+    full_prompt1 = prompt + "\n\n" + "Here is additional context about HPELM usage:\n" + file.read()
+
+with open('../../doc/hpelm_elm.py', 'r') as file:
+    full_prompt2 = prompt + "\n\n" + "Here is additional context about HPELM usage:\n" + file.read()
+
+with open('../../doc/hpelm_schema.py', 'r') as file:
+    full_prompt3 = prompt + "\n\n" + "Here is additional context about HPELM usage:\n" + file.read()
+
+with open('../../doc/hpelm_readthedocs.md', 'r') as file:
+    full_prompt4 = prompt + "\n\n" + "Here is additional context about HPELM usage:\n" + file.read()
 
 full_prompts = [full_prompt1, full_prompt2, full_prompt3, full_prompt4]
+context_types = ["examples", "source", "interface", "docstrings"]
 
 fix_request = """
 Fix the code to be run by exec(code) in Python.: {generated_code}
@@ -152,7 +137,7 @@ for i in range(n_attempts):
 
         experimental_results.append({
             "model_name": model_name,
-            "prompt": j,
+            "context": context_types[j],
             "experiment": i,
             "score": score,
             "msg": msg,

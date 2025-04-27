@@ -6,11 +6,38 @@ nest_asyncio.apply()
 import os
 import pandas as pd
 
+from pydantic_ai import Agent
+from pydantic_ai.models.openai import OpenAIModel
+from pydantic_ai.providers.openai import OpenAIProvider
+
+model_name='qwen2.5-coder:7b'
+
+
+ollama_model = OpenAIModel(
+    model_name=model_name,
+    provider=OpenAIProvider(base_url='http://localhost:11434/v1')
+)
+
+simple_agent = Agent(ollama_model)
+
+from pydantic import BaseModel
+from pydantic_ai.exceptions import UnexpectedModelBehavior
+
+class PythonFunctionModel(BaseModel):
+    python_code: str  # Python code of the function
+
+# Create a new agent with the formatted output model
+formatted_agent = Agent(
+    ollama_model,
+    output_type=PythonFunctionModel
+)
+
+
 df_parts = []
 
 for root,_, files in os.walk("."):
     for file in files:
-        if file.endswith(".pkl") and not "old_data" in root:
+        if file.endswith(".pkl"):
             df = pd.read_pickle(os.path.join(root, file))
             df_parts.append(df)
 
@@ -19,7 +46,23 @@ df = pd.concat(df_parts, ignore_index=True)
 df.drop(columns=["generated_code", "fixed_code"], inplace=True)
 
 # display results
-df['prompt'].value_counts()
+df['format'].value_counts()
+
+# %%
+
+df_parts = []
+
+for root,_, files in os.walk("."):
+    for file in files:
+        if file.endswith(".pkl"):
+            df = pd.read_pickle(os.path.join(root, file))
+            df_parts.append(df)
+
+df = pd.concat(df_parts, ignore_index=True)
+df = df[df['format'] == "pydantic"][['generated_code']]
+
+from IPython.display import display
+display(df.head(20).style.set_caption("Sample of DataFrame").background_gradient(cmap="YlGnBu"))
 
 # %%
 
@@ -36,7 +79,7 @@ df['score_final'] = df.apply(
 )
 
 # Count each score per model_name and normalize to get percentages
-score_counts = df.groupby('prompt')['score_final'].value_counts(normalize=True).unstack(fill_value=0)
+score_counts = df.groupby('format')['score_final'].value_counts(normalize=True).unstack(fill_value=0)
 # convert to percentage
 score_counts = (score_counts * 100).round(2)
 
@@ -50,19 +93,17 @@ score_counts = score_counts[[0, 1, 4, 5]]
 # score_counts = score_counts.reindex(model_order).dropna(how="all")
 
 # Plot 4 pie charts, one for each prompt
-fig, axes = plt.subplots(1, 4, figsize=(8, 3))
+fig, axes = plt.subplots(1, 2, figsize=(6, 3))
 
 score_labels = {0: "Fail", 1: "Eval", 4: "Fixed", 5: "Pass"}
 colors = {0: "red", 1: "orange", 4: "yellow", 5: "green"}
 
 titles = [
     "Full prompt, all details",
-    "Full prompt, no data shape",
-    "Task with a few details",
-    "Short task description"
+    "Missing data shape",
 ]
 
-for i, (prompt, row) in enumerate(score_counts.iterrows()):
+for i, (format, row) in enumerate(score_counts.iterrows()):
     ax = axes[i]
     values = row.values
     labels = [score_labels[k] for k in score_counts.columns]
@@ -77,7 +118,7 @@ for i, (prompt, row) in enumerate(score_counts.iterrows()):
         colors=pie_colors,
         textprops={'fontsize': 10}
     )
-    ax.set_title(titles[i], fontsize=10, pad=0)  # Adjusted pad to bring title closer
+    ax.set_title(format, fontsize=10, pad=0)  # Adjusted pad to bring title closer
     ax.axis('equal')
 
 # Add a separate legend
@@ -94,14 +135,12 @@ fig.legend(
 plt.tight_layout()
 plt.show()
 
-
-
 # %%
 
 # save to png, no borders
 fig = ax.get_figure()
 fig.savefig(
-    "prompt.png",
+    "format.png",
     bbox_inches='tight',
     pad_inches=0,
     dpi=300,
