@@ -14,7 +14,7 @@ df_parts = []
 
 for root,_, files in os.walk("."):
     for file in files:
-        if file.endswith(".pkl"):
+        if file.endswith(".pkl") and not "old_data" in root:
             df = pd.read_pickle(os.path.join(root, file))
             df_parts.append(df)
 

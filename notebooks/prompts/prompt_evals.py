@@ -112,8 +112,11 @@ prompt4 = """
 # Append the ELM implementation to the prompt
 with open('../../doc/hpelm_doc_alt.md', 'r') as file:
     full_prompt1 = prompt1 + "\n\n" + "Here is additional context about HPELM usage:\n" + file.read()
+with open('../../doc/hpelm_doc_alt.md', 'r') as file:
     full_prompt2 = prompt2 + "\n\n" + "Here is additional context about HPELM usage:\n" + file.read()
+with open('../../doc/hpelm_doc_alt.md', 'r') as file:
     full_prompt3 = prompt3 + "\n\n" + "Here is additional context about HPELM usage:\n" + file.read()
+with open('../../doc/hpelm_doc_alt.md', 'r') as file:
     full_prompt4 = prompt4 + "\n\n" + "Here is additional context about HPELM usage:\n" + file.read()
 
 full_prompts = [full_prompt1, full_prompt2, full_prompt3, full_prompt4]
