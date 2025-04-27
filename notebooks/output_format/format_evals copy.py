@@ -85,7 +85,7 @@ class PythonFunctionModel(BaseModel):
 formatted_agent = Agent(
     ollama_model,
     output_type=PythonFunctionModel,
-    retries=3,
+    retries=3
 )
 
 # %%
@@ -117,6 +117,12 @@ Return only the code, no explanation.
 
 Error: {msg}
 """
+
+# %%
+
+x = formatted_agent.run_sync(full_prompt).output
+print(x.python_code)
+
 
 # %%
 # run experiment multiple times and gather statistics
@@ -155,7 +161,14 @@ for i in range(n_attempts):
     try:
         generated_code = formatted_agent.run_sync(full_prompt).output.python_code
     except UnexpectedModelBehavior as e:
-        generated_code = str(e)
+        generated_code = "UnexpectedModelBehavior: Exceeded maximum retries (1) for result validation"
+
+    score, msg = eval_code(generated_code)
+    if score == 1:
+        print("Code has errors, trying to fix it...")
+        rq = fix_request.format(generated_code=generated_code, msg=msg)
+        fixed_code = formatted_agent.run_sync(rq).data
+        fix_score, fix_msg = eval_code(fixed_code)
 
     experimental_results.append({
         "model_name": model_name,

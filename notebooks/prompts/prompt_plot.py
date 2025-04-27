@@ -6,10 +6,6 @@ nest_asyncio.apply()
 import os
 import pandas as pd
 
-
-# %%
-# load results
-
 df_parts = []
 
 for root,_, files in os.walk("."):
@@ -61,7 +57,7 @@ colors = {0: "red", 1: "orange", 4: "yellow", 5: "green"}
 
 titles = [
     "Full prompt, all details",
-    "Missing data shape",
+    "Full prompt, no data shape",
     "Task with a few details",
     "Short task description"
 ]
@@ -75,7 +71,7 @@ for i, (prompt, row) in enumerate(score_counts.iterrows()):
     pie_colors = [colors[k] for k in score_counts.columns]
     ax.pie(
         values,
-        labels=labels,
+        # labels=labels,
         autopct='%1.0f%%',
         startangle=90,
         colors=pie_colors,
@@ -83,6 +79,17 @@ for i, (prompt, row) in enumerate(score_counts.iterrows()):
     )
     ax.set_title(titles[i], fontsize=10, pad=0)  # Adjusted pad to bring title closer
     ax.axis('equal')
+
+# Add a separate legend
+fig.legend(
+    handles=[plt.Line2D([0], [0], marker='o', color='w', markerfacecolor=colors[k], markersize=10) for k in score_labels],
+    labels=[score_labels[k] for k in score_labels],
+    loc='upper center',
+    bbox_to_anchor=(0.5, -0.05),
+    ncol=len(score_labels),
+    fontsize=10
+)
+
 
 plt.tight_layout()
 plt.show()

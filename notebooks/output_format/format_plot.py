@@ -6,9 +6,33 @@ nest_asyncio.apply()
 import os
 import pandas as pd
 
+from pydantic_ai import Agent
+from pydantic_ai.models.openai import OpenAIModel
+from pydantic_ai.providers.openai import OpenAIProvider
+
+model_name='qwen2.5-coder:7b'
+
+
+ollama_model = OpenAIModel(
+    model_name=model_name,
+    provider=OpenAIProvider(base_url='http://localhost:11434/v1')
+)
+
+simple_agent = Agent(ollama_model)
+
+from pydantic import BaseModel
+from pydantic_ai.exceptions import UnexpectedModelBehavior
+
+class PythonFunctionModel(BaseModel):
+    python_code: str  # Python code of the function
+
+# Create a new agent with the formatted output model
+formatted_agent = Agent(
+    ollama_model,
+    output_type=PythonFunctionModel
+)
 
 # %%
-# load results
 
 df_parts = []
 
@@ -24,6 +48,22 @@ df.drop(columns=["generated_code", "fixed_code"], inplace=True)
 
 # display results
 df['format'].value_counts()
+
+# %%
+
+# df_parts = []
+
+# for root,_, files in os.walk("."):
+#     for file in files:
+#         if file.endswith(".pkl"):
+#             df = pd.read_pickle(os.path.join(root, file))
+#             df_parts.append(df)
+
+# df = pd.concat(df_parts, ignore_index=True)
+# df = df[df['format'] == "pydantic"][['generated_code']]
+
+# from IPython.display import display
+# display(df.head(20).style.set_caption("Sample of DataFrame").background_gradient(cmap="YlGnBu"))
 
 # %%
 
@@ -54,7 +94,7 @@ score_counts = score_counts[[0, 1, 4, 5]]
 # score_counts = score_counts.reindex(model_order).dropna(how="all")
 
 # Plot 4 pie charts, one for each prompt
-fig, axes = plt.subplots(1, 2, figsize=(8, 3))
+fig, axes = plt.subplots(1, 2, figsize=(6, 3))
 
 score_labels = {0: "Fail", 1: "Eval", 4: "Fixed", 5: "Pass"}
 colors = {0: "red", 1: "orange", 4: "yellow", 5: "green"}
@@ -73,7 +113,7 @@ for i, (format, row) in enumerate(score_counts.iterrows()):
     pie_colors = [colors[k] for k in score_counts.columns]
     ax.pie(
         values,
-        labels=labels,
+        # labels=labels,
         autopct='%1.0f%%',
         startangle=90,
         colors=pie_colors,
@@ -82,10 +122,19 @@ for i, (format, row) in enumerate(score_counts.iterrows()):
     ax.set_title(format, fontsize=10, pad=0)  # Adjusted pad to bring title closer
     ax.axis('equal')
 
+# Add a separate legend
+fig.legend(
+    handles=[plt.Line2D([0], [0], marker='o', color='w', markerfacecolor=colors[k], markersize=10) for k in score_labels],
+    labels=[score_labels[k] for k in score_labels],
+    loc='upper center',
+    bbox_to_anchor=(0.5, -0.05),
+    ncol=len(score_labels),
+    fontsize=10
+)
+
+
 plt.tight_layout()
 plt.show()
-
-
 
 # %%
 
